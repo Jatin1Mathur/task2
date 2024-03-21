@@ -1,19 +1,15 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify 
+from model import db,User
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash
+from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///User.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app)
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(100), unique=True, nullable=False)
-    email = db.Column(db.String(100), unique=True, nullable=False)
-    password = db.Column(db.String(100), nullable=False)
-
+db.init_app(app)
 @app.route('/', methods=['POST'])
 def register():
     data = request.get_json()
@@ -21,10 +17,15 @@ def register():
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
+    pwd = generate_password_hash('password')
     
-    user = User(username=username, email=email, password=password)
-    db.session.add(user)
-    db.session.commit()
+    user = User.query.filter_by(username=username).first()
+    if user:
+        return jsonify({'message' : 'already present'})
+    else:
+        user = User(username=username, email=email, password=pwd)
+        db.session.add(user)
+        db.session.commit()
     
     return jsonify({'message': 'User registered successfully'})
 
